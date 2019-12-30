@@ -141,6 +141,7 @@ namespace Session_file_parser
             }
 
             string inputPath = String.Empty;
+            string input = String.Empty;
             if (inputType == 'f')
             {
                 Console.WriteLine("Enter the path to the session file.");
@@ -153,6 +154,11 @@ namespace Session_file_parser
                     inputPath = Console.ReadLine();
                     Console.WriteLine();
                 }
+            }
+            else
+            {
+                Console.WriteLine("Please, Enter the input (on one line).");
+                input = Console.ReadLine();
             }
 
             Console.WriteLine("Do you want to save the output into a textfile or display it as a text in this console?");
