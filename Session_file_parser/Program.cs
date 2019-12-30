@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,7 +24,7 @@ namespace Session_file_parser
             set { type = value; }
         }
     }
-    class NumeralVariable : Variable
+    class IntegerVariable : Variable
     {
         private int value;
 
@@ -33,8 +33,26 @@ namespace Session_file_parser
             get { return value; }
             set { this.value = value; }
         }
-        public NumeralVariable(string name, char type, int value)
+        public IntegerVariable(string name, char type, int value)
         {
+            if (type != 'i') { throw new InvalidDataException(); }
+            this.Name = name;
+            this.Type = type;
+            this.Value = value;
+        }
+    }
+    class DecimalVariable : Variable
+    {
+        private double value;
+
+        public double Value
+        {
+            get { return value; }
+            set { this.value = value; }
+        }
+        public DecimalVariable(string name, char type, double value)
+        {
+            if (type != 'd') { throw new InvalidDataException(); }
             this.Name = name;
             this.Type = type;
             this.Value = value;
@@ -57,6 +75,7 @@ namespace Session_file_parser
         }
         public StringVariable(string name, char type, string value)
         {
+            if (type != 's') { throw new InvalidDataException(); }
             this.Name = name;
             this.Type = type;
             this.Value = value;
@@ -72,6 +91,7 @@ namespace Session_file_parser
         }
         public BooleanVariable(string name, char type, bool value)
         {
+            if (type != 'b') { throw new InvalidDataException(); }if (type != 'i' && type != 'd') { throw new InvalidDataException(); }
             this.Name = name;
             this.Type = type;
             this.Value = value;
@@ -101,6 +121,7 @@ namespace Session_file_parser
         }
         public ArrayVariable(string name, char type)
         {
+            if (type != 'a') { throw new InvalidDataException(); }
             this.Name = name;
             this.Type = type;
         }
