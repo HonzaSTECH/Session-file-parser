@@ -7,6 +7,105 @@ using System.Threading.Tasks;
 
 namespace Session_file_parser
 {
+    abstract class Variable
+    {
+        private string name;
+        private char type;
+        private int value;
+
+        public string Name
+        {
+            get { return name; }
+            set { name = value; }
+        }
+        public char Type
+        {
+            get { return type; }
+            set { type = value; }
+        }
+    }
+    class NumeralVariable : Variable
+    {
+        private int value;
+
+        public int Value
+        {
+            get { return value; }
+            set { this.value = value; }
+        }
+        public NumeralVariable(string name, char type, int value)
+        {
+            this.Name = name;
+            this.Type = type;
+            this.Value = value;
+        }
+    }
+    class StringVariable : Variable
+    {
+        private int length;
+        private string value;
+
+        public int Length
+        {
+            get { return length; }
+            set { length = value; }
+        }
+        public string Value
+        {
+            get { return value; }
+            set { this.value = value; }
+        }
+        public StringVariable(string name, char type, string value)
+        {
+            this.Name = name;
+            this.Type = type;
+            this.Value = value;
+        }
+    }
+    class BooleanVariable : Variable
+    {
+        private bool value;
+        public bool Value
+        {
+            get { return value; }
+            set { this.value = value; }
+        }
+        public BooleanVariable(string name, char type, bool value)
+        {
+            this.Name = name;
+            this.Type = type;
+            this.Value = value;
+        }
+    }
+    class ArrayVariable : Variable
+    {
+        private int length;
+        private List<Variable> value;
+
+        public int Length
+        {
+            get { return length; }
+            set { length = value; }
+        }
+        public List<Variable> Value
+        {
+            get { return value; }
+            set
+            {
+                int cnt = value.Count;
+                for (int i = 0; i < cnt; i++)
+                {
+                    this.value.Add(value[i]);
+                }
+            }
+        }
+        public ArrayVariable(string name, char type)
+        {
+            this.Name = name;
+            this.Type = type;
+        }
+    }
+
     class Program
     {
         static void Main(string[] args)
@@ -56,6 +155,7 @@ namespace Session_file_parser
             Console.ReadKey(true);
 
             string result = String.Empty;
+            
             /*
              TODO Program
              */
