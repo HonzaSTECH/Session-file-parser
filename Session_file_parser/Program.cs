@@ -9,20 +9,15 @@ namespace Session_file_parser
 {
     abstract class Variable
     {
-        private string name;
         private char type;
-        private int value;
 
-        public string Name
-        {
-            get { return name; }
-            set { name = value; }
-        }
         public char Type
         {
             get { return type; }
             set { type = value; }
         }
+
+        public abstract void AddElement(ArrayElement arrayElement);
     }
     class IntegerVariable : Variable
     {
@@ -33,12 +28,16 @@ namespace Session_file_parser
             get { return value; }
             set { this.value = value; }
         }
-        public IntegerVariable(string name, char type, int value)
+        public IntegerVariable(char type, int value)
         {
             if (type != 'i') { throw new InvalidDataException(); }
-            this.Name = name;
             this.Type = type;
             this.Value = value;
+        }
+
+        public override void AddElement(ArrayElement arrayElement)
+        {
+            throw new NotImplementedException();
         }
     }
     class DecimalVariable : Variable
@@ -50,12 +49,16 @@ namespace Session_file_parser
             get { return value; }
             set { this.value = value; }
         }
-        public DecimalVariable(string name, char type, double value)
+        public DecimalVariable(char type, double value)
         {
             if (type != 'd') { throw new InvalidDataException(); }
-            this.Name = name;
             this.Type = type;
             this.Value = value;
+        }
+
+        public override void AddElement(ArrayElement arrayElement)
+        {
+            throw new NotImplementedException();
         }
     }
     class StringVariable : Variable
@@ -73,13 +76,18 @@ namespace Session_file_parser
             get { return value; }
             set { this.value = value; }
         }
-        public StringVariable(string name, char type, int length, string value)
+        public StringVariable(char type, int length, string value)
         {
             if (type != 's') { throw new InvalidDataException(); }
-            this.Name = name;
+            if (length != value.Length) { throw new InvalidDataException(); }
             this.Type = type;
             this.Length = length;
             this.Value = value;
+        }
+
+        public override void AddElement(ArrayElement arrayElement)
+        {
+            throw new NotImplementedException();
         }
     }
     class BooleanVariable : Variable
@@ -90,41 +98,83 @@ namespace Session_file_parser
             get { return value; }
             set { this.value = value; }
         }
-        public BooleanVariable(string name, char type, bool value)
+        public BooleanVariable(char type, bool value)
         {
             if (type != 'b') { throw new InvalidDataException(); }
-            this.Name = name;
             this.Type = type;
             this.Value = value;
+        }
+
+        public override void AddElement(ArrayElement arrayElement)
+        {
+            throw new NotImplementedException();
         }
     }
     class ArrayVariable : Variable
     {
         private int length;
-        private List<Variable> value;
+        private List<ArrayElement> value;
 
         public int Length
         {
             get { return length; }
             set { length = value; }
         }
-        public List<Variable> Value
+        public List<ArrayElement> Value
         {
-            get { return value; }
-            set
-            {
-                int cnt = value.Count;
-                for (int i = 0; i < cnt; i++)
-                {
-                    this.value.Add(value[i]);
-                }
-            }
+            get { return this.value; }
+            set { throw new InvalidOperationException(); }
         }
-        public ArrayVariable(string name, char type)
+        public override void AddElement(ArrayElement el)
+        {
+            this.value.Add(el);
+        }
+
+        public ArrayVariable(char type)
         {
             if (type != 'a') { throw new InvalidDataException(); }
-            this.Name = name;
             this.Type = type;
+        }
+    }
+
+    abstract class ArrayElement
+    {
+        private char index_type;
+        private char value_type;
+        private Variable value;
+
+        public char Index_type
+        {
+            get { return index_type; }
+            set { index_type = value; }
+        }
+        public char Value_type
+        {
+            get { return value_type; }
+            set { value_type = value; }
+        }
+        public Variable Value
+        {
+            get { return this.Value; }
+            set { this.value = value; }
+        }
+    }
+    class NumericArrayElement : ArrayElement
+    {
+        private IntegerVariable index;
+        public IntegerVariable Index
+        {
+            get { return index; }
+            set { index = value; }
+        }
+    }
+    class AssociativeArrayElement : ArrayElement
+    {
+        private StringVariable index;
+        public StringVariable Index
+        {
+            get { return index; }
+            set { index = value; }
         }
     }
 
@@ -134,7 +184,158 @@ namespace Session_file_parser
         const char valueDelimiter = ':';
         const char variableDelimiter = ';';
         const char stringSigns = '"';
+        const char arrayStartSign = '{';
         const char arrayEndSign = '}';
+
+        static Variable GetVariable(char type, int length, string rawValue)
+        {
+            Variable var = null;
+            switch (type)   //Parsing the raw value and saving into object
+            {
+                case 'i':   //Integer
+                    var = new IntegerVariable(type, Convert.ToInt32(rawValue));
+                    break;
+                case 'd':   //Double
+                    var = new DecimalVariable(type, double.Parse(rawValue, System.Globalization.CultureInfo.InvariantCulture));
+                    break;
+                case 'b':   //Boolean
+                    var = new BooleanVariable(type, (rawValue == "1") ? true : false);
+                    break;
+                case 's':   //String
+                    var = new StringVariable(type, length, rawValue);
+                    break;
+                case 'a':   //Array
+                    var = new ArrayVariable(type);
+                    //Split the raw input into single array elements
+                    //Numeric arrays:           i:?;i:?;        i:?;s:?:"?";
+                    //Associative arrays:       s:?:"?";i:?;    s:?:"?";s:?:"?";
+                    //Multidimensional arrays   i:?;a:?:{...}   s:?:"?";a:?:{...}
+                    List<String> rawArrayElements = new List<string>();
+                    //TODO
+
+                    int cnt = rawArrayElements.Count;
+                    for (int i = 0; i < cnt; i++)
+                    {
+                        var.AddElement(ReadArrayVariable(rawArrayElements[i]));
+                    }
+                    break;
+            }
+            return var;
+        }
+
+        static IntegerVariable ReadIntegerVariable(string rawInput)
+        {
+            /**
+             * Method to return an object of type IntegerVariable with data from input string
+             * Format of the input string:
+             *      i:X;
+             *      X = value
+             */
+            int i = 0;
+            char type = rawInput[i];
+            if (type != 'i') { throw new InvalidDataException(); }
+            i += 2; //Skipping the value delimiter
+
+            string value_str = String.Empty;
+            while (rawInput[i] != variableDelimiter)
+            {
+                value_str += rawInput[i];
+            }
+            int value = Convert.ToInt32(value_str);
+            return new IntegerVariable(type, value);
+        }
+
+        static DecimalVariable ReadDecimalVariable(string rawInput)
+        {
+            /**
+             * Method to return an object of type DecimalVariable with data from input string
+             * Format of the input string:
+             *      d:X;
+             *      X = value
+             */
+            int i = 0;
+            char type = rawInput[i];
+            if (type != 'd') { throw new InvalidDataException(); }
+            i += 2; //Skipping the value delimiter
+
+            string value_str = String.Empty;
+            while (rawInput[i] != variableDelimiter)
+            {
+                value_str += rawInput[i];
+            }
+            double value = double.Parse(value_str, System.Globalization.CultureInfo.InvariantCulture);
+            return new DecimalVariable(type, value);
+        }
+
+        static StringVariable ReadStringVariable(string rawInput)
+        {
+            /**
+             * Method to return an object of type StringVariable with data from input string
+             * Format of the input string:
+             *      s:A:X;
+             *      A = length
+             *      X = content
+             */
+            int i = 0;
+            char type = rawInput[i];
+            if (type != 's') { throw new InvalidDataException(); }
+            i += 2; //Skipping the value delimiter
+
+            //Reading the length (A)
+            string str = String.Empty;
+            while (rawInput[i] != variableDelimiter)
+            {
+                str += rawInput[i];
+            }
+            int length = Convert.ToInt32(str);
+            i += 2; //Skipping the value delimiter
+
+            //Reading the content (X)
+            str = String.Empty;
+            while (rawInput[i] != variableDelimiter)
+            {
+                str += rawInput[i];
+            }
+            return new StringVariable(type, length, str);
+        }
+        static BooleanVariable ReadBooleanVariable(string rawInput)
+        {
+            /**
+             * Method to return an object of type BooleanVariable with data from input string
+             * Format of the input string:
+             *      b:X;
+             *      X = value (0 for false, 1 for true)
+             */
+            int i = 0;
+            char type = rawInput[i];
+            if (type != 'b') { throw new InvalidDataException(); }
+            i += 2; //Skipping the value delimiter
+
+            bool val = (rawInput[i] == '1') ? true : false;
+            return new BooleanVariable(type, val);
+        }
+
+        static ArrayVariable ReadArrayVariable(string input)
+        {
+            /**
+             * Method to return an object of type ArrayVariable with data from input string
+             * Format of the input string:
+             *      a:A:{t:l:x;T:L:X;...;};
+             *      A = amount of index-value pairs in the bracklets
+             *      t = type of index
+             *      l = length of the index (in case of associative array) - not obligatory
+             *      x = value of the index
+             *      T = type of the value
+             *      L = length of the value (in case of string or array value) - not obligatory
+             *      X = value itself
+             *      ... = next elements
+             */
+            //TODO
+            //char index_type = input[0];
+
+            throw new NotImplementedException();
+            //return new ArrayElement();
+        }
 
         static void Main(string[] args)
         {
@@ -197,7 +398,7 @@ namespace Session_file_parser
             int varCount = 0;
             int inputLength = input.Length;
             string result = String.Empty;
-            Dictionary<int, Variable> vars = new Dictionary<int, Variable>();
+            Dictionary<string, Variable> vars = new Dictionary<string, Variable>();
 
             while (i < inputLength)
             {
@@ -214,82 +415,49 @@ namespace Session_file_parser
                 i++;    //Skipping the delimiter
                 Console.WriteLine("\tName: {0}", var_name);
 
-                //Getting the type of the variable
-                char var_type = input[i];
-                i += 2;    //Skipping the type and the delimiter
-                Console.WriteLine("\tType: {0}", var_type.ToString());
+                Variable var = null;
+                char type = input[i];
+                i += 2; //Skipping the delimiter
 
-                //Getting the length if array or string
-                string var_length_str = String.Empty;
-                int var_length = 0;
-                if (var_type == 'a' || var_type == 's')
+                if (type == 'a')    //Array value is ending with }
                 {
-                    while (input[i] != valueDelimiter)
+                    int arrayLevel = 0;
+                    string value_str = String.Empty;
+                    while (arrayLevel > 0 || input[i] != variableDelimiter)
                     {
-                        var_length_str += input[i];
+                        if (input[i] == arrayStartSign) { arrayLevel++; }
+                        if (input[i] == arrayEndSign) { arrayLevel--; }
+                        value_str += input[i];
                         i++;
                     }
-                    var_length = Convert.ToInt32(var_length_str);
-                    i++;    //Skipping the delimiter
-                    Console.WriteLine("Length: {0}", var_length);
+                    value_str += input[i];   //Adding the closing }
+                    var = ReadArrayVariable(value_str);
                 }
-
-                //Getting the value of the variable
-                string var_value_str = String.Empty;
-                switch (var_type)   //Getting the raw value
+                else    //Integer, double, boolean and string values are ending with ;
                 {
-                    case 'i':   //Integer   \
-                    case 'd':   //Double     --> Ending with ;
-                    case 'b':   //Boolean   /
-                        while (input[i] != variableDelimiter)
-                        {
-                            var_value_str += input[i];
-                            i++;
-                        }
-                        i++;    //Skipping the delimiter
-                        break;
-                    case 's':   //String    --> Surronded with " "
-                        i++;    //Skipping the starting "
-                        while (input[i] != stringSigns)
-                        {
-                            var_value_str += input[i];
-                            i++;
-                        }
-                        i += 2;    //Skipping the ending " and the delimiter
-                        break;
-                    case 'a':   //Array     --> Surronded with { }
-                        i++;    //Skipping the {
-                        while (input[i] != arrayEndSign)
-                        {
-                            var_value_str += input[i];
-                            i++;
-                        }
-                        i++;    //Skipping the }
-                        break;
+                    string value_str = String.Empty;
+                    while (input[i] != variableDelimiter)
+                    {
+                        value_str += input[i];
+                        i++;
+                    }
+                    switch (type)
+                    {
+                        case 'i':
+                            var = ReadIntegerVariable(value_str);
+                            break;
+                        case 'd':
+                            var = ReadDecimalVariable(value_str);
+                            break;
+                        case 's':
+                            var = ReadStringVariable(value_str);
+                            break;
+                        case 'b':
+                            var = ReadBooleanVariable(value_str);
+                            break;
+                    }
                 }
-                switch (var_type)   //Parsing the raw value and saving into object
-                {
-                    case 'i':   //Integer
-                        int var_value_i = Convert.ToInt32(var_value_str);
-                        vars.Add(varCount, new IntegerVariable(var_name, var_type, var_value_i));
-                        break;
-                    case 'd':   //Double
-                        double var_value_d = double.Parse(var_value_str, System.Globalization.CultureInfo.InvariantCulture);
-                        vars.Add(varCount, new DecimalVariable(var_name, var_type, var_value_d));
-                        break;
-                    case 'b':   //Boolean
-                        bool var_value_b = (var_value_str == "1") ? true : false;
-                        vars.Add(varCount, new BooleanVariable(var_name, var_type, var_value_b));
-                        break;
-                    case 's':   //String
-                        string var_value_s = var_value_str;
-                        vars.Add(varCount, new StringVariable(var_name, var_type, var_length, var_value_s));
-                        break;
-                    case 'a':   //Array
-                        //TODO
-                        break;
-                }
-
+                vars.Add(var_name, var);  //Addition of the formated variable to the dictionary
             }
             
             Console.WriteLine("Done!");
