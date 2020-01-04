@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Session_file_parser
 {
@@ -113,7 +110,7 @@ namespace Session_file_parser
     class ArrayVariable : Variable
     {
         private int length;
-        private List<ArrayElement> value;
+        private readonly List<ArrayElement> value;
 
         public int Length
         {
@@ -137,44 +134,26 @@ namespace Session_file_parser
         }
     }
 
-    abstract class ArrayElement
+    class ArrayElement
     {
-        private char index_type;
-        private char value_type;
+        private Variable index;
         private Variable value;
 
-        public char Index_type
+        public Variable Index
         {
-            get { return index_type; }
-            set { index_type = value; }
-        }
-        public char Value_type
-        {
-            get { return value_type; }
-            set { value_type = value; }
+            get { return this.index; }
+            set { this.index = value; }
         }
         public Variable Value
         {
-            get { return this.Value; }
+            get { return this.value; }
             set { this.value = value; }
         }
-    }
-    class NumericArrayElement : ArrayElement
-    {
-        private IntegerVariable index;
-        public IntegerVariable Index
+
+        public ArrayElement(Variable index, Variable value)
         {
-            get { return index; }
-            set { index = value; }
-        }
-    }
-    class AssociativeArrayElement : ArrayElement
-    {
-        private StringVariable index;
-        public StringVariable Index
-        {
-            get { return index; }
-            set { index = value; }
+            this.index = index;
+            this.value = value;
         }
     }
 
@@ -186,42 +165,6 @@ namespace Session_file_parser
         const char stringSigns = '"';
         const char arrayStartSign = '{';
         const char arrayEndSign = '}';
-
-        static Variable GetVariable(char type, int length, string rawValue)
-        {
-            Variable var = null;
-            switch (type)   //Parsing the raw value and saving into object
-            {
-                case 'i':   //Integer
-                    var = new IntegerVariable(type, Convert.ToInt32(rawValue));
-                    break;
-                case 'd':   //Double
-                    var = new DecimalVariable(type, double.Parse(rawValue, System.Globalization.CultureInfo.InvariantCulture));
-                    break;
-                case 'b':   //Boolean
-                    var = new BooleanVariable(type, (rawValue == "1") ? true : false);
-                    break;
-                case 's':   //String
-                    var = new StringVariable(type, length, rawValue);
-                    break;
-                case 'a':   //Array
-                    var = new ArrayVariable(type);
-                    //Split the raw input into single array elements
-                    //Numeric arrays:           i:?;i:?;        i:?;s:?:"?";
-                    //Associative arrays:       s:?:"?";i:?;    s:?:"?";s:?:"?";
-                    //Multidimensional arrays   i:?;a:?:{...}   s:?:"?";a:?:{...}
-                    List<String> rawArrayElements = new List<string>();
-                    //TODO
-
-                    int cnt = rawArrayElements.Count;
-                    for (int i = 0; i < cnt; i++)
-                    {
-                        var.AddElement(ReadArrayVariable(rawArrayElements[i]));
-                    }
-                    break;
-            }
-            return var;
-        }
 
         static IntegerVariable ReadIntegerVariable(string rawInput)
         {
@@ -240,6 +183,7 @@ namespace Session_file_parser
             while (rawInput[i] != variableDelimiter)
             {
                 value_str += rawInput[i];
+                i++;
             }
             int value = Convert.ToInt32(value_str);
             return new IntegerVariable(type, value);
@@ -262,6 +206,7 @@ namespace Session_file_parser
             while (rawInput[i] != variableDelimiter)
             {
                 value_str += rawInput[i];
+                i++;
             }
             double value = double.Parse(value_str, System.Globalization.CultureInfo.InvariantCulture);
             return new DecimalVariable(type, value);
@@ -272,7 +217,7 @@ namespace Session_file_parser
             /**
              * Method to return an object of type StringVariable with data from input string
              * Format of the input string:
-             *      s:A:X;
+             *      s:A:"X";
              *      A = length
              *      X = content
              */
@@ -283,19 +228,22 @@ namespace Session_file_parser
 
             //Reading the length (A)
             string str = String.Empty;
-            while (rawInput[i] != variableDelimiter)
+            while (rawInput[i] != valueDelimiter)
             {
                 str += rawInput[i];
+                i++;
             }
             int length = Convert.ToInt32(str);
-            i += 2; //Skipping the value delimiter
+            i += 2; //Skipping the value delimiter and the opening "
 
             //Reading the content (X)
             str = String.Empty;
             while (rawInput[i] != variableDelimiter)
             {
                 str += rawInput[i];
+                i++;
             }
+            str = str.Remove(str.Length - 1);   //Removing the closing "
             return new StringVariable(type, length, str);
         }
         static BooleanVariable ReadBooleanVariable(string rawInput)
@@ -315,13 +263,13 @@ namespace Session_file_parser
             return new BooleanVariable(type, val);
         }
 
-        static ArrayVariable ReadArrayVariable(string input)
+        static ArrayVariable ReadArrayVariable(string rawInput)
         {
             /**
              * Method to return an object of type ArrayVariable with data from input string
              * Format of the input string:
              *      a:A:{t:l:x;T:L:X;...;};
-             *      A = amount of index-value pairs in the bracklets
+             *      A = amount of index-value pairs in the brackets
              *      t = type of index
              *      l = length of the index (in case of associative array) - not obligatory
              *      x = value of the index
@@ -330,11 +278,73 @@ namespace Session_file_parser
              *      X = value itself
              *      ... = next elements
              */
-            //TODO
-            //char index_type = input[0];
+            int i = 0;
+            char type = rawInput[i];
+            if (type != 'a') { throw new InvalidDataException(); }
+            i += 2; //Skipping the value delimiter
 
-            throw new NotImplementedException();
-            //return new ArrayElement();
+            string str = String.Empty;
+            while (rawInput[i] != valueDelimiter)
+            {
+                str += rawInput[i];
+                i++;
+            }
+            int arrLength = Convert.ToInt32(str);
+            str = String.Empty;
+            i += 2;    //Skipping the delimiter and opening bracket
+
+            ArrayVariable var = new ArrayVariable(type);
+
+            for (int j = 0; j < arrLength; j++)
+            {
+                Variable inx = null;
+                Variable val = null;
+
+                //Reading the index
+                char index_type = rawInput[i];
+                while (rawInput[i] != variableDelimiter)
+                {
+                    str += rawInput[i];
+                    i++;
+                }
+                switch (index_type)
+                {
+                    case 'i':
+                        inx = ReadIntegerVariable(str);
+                        break;
+                    case 's':
+                        inx = ReadStringVariable(str);
+                        break;
+                }
+
+                //Reading the value
+                char value_type = rawInput[i];
+                while (rawInput[i] != variableDelimiter)
+                {
+                    str += rawInput[i];
+                    i++;
+                }
+                switch (value_type)
+                {
+                    case 'i':
+                        val = ReadIntegerVariable(str);
+                        break;
+                    case 'd':
+                        val = ReadDecimalVariable(str);
+                        break;
+                    case 's':
+                        val = ReadStringVariable(str);
+                        break;
+                    case 'b':
+                        val = ReadBooleanVariable(str);
+                        break;
+                    case 'a':
+                        val = ReadArrayVariable(str);
+                        break;
+                }
+                var.AddElement(new ArrayElement(inx, val));
+            }
+            return var;
         }
 
         static void Main(string[] args)
@@ -417,13 +427,13 @@ namespace Session_file_parser
 
                 Variable var = null;
                 char type = input[i];
+                string value_str = type.ToString() + valueDelimiter.ToString();
                 i += 2; //Skipping the delimiter
 
                 if (type == 'a')    //Array value is ending with }
                 {
-                    int arrayLevel = 0;
-                    string value_str = String.Empty;
-                    while (arrayLevel > 0 || input[i] != variableDelimiter)
+                    int arrayLevel = -1;
+                    while (arrayLevel > 0 || input[i] != arrayEndSign)
                     {
                         if (input[i] == arrayStartSign) { arrayLevel++; }
                         if (input[i] == arrayEndSign) { arrayLevel--; }
@@ -435,12 +445,13 @@ namespace Session_file_parser
                 }
                 else    //Integer, double, boolean and string values are ending with ;
                 {
-                    string value_str = String.Empty;
                     while (input[i] != variableDelimiter)
                     {
                         value_str += input[i];
                         i++;
                     }
+                    value_str += input[i];   //Adding the ending delimiter
+                    i++;
                     switch (type)
                     {
                         case 'i':
