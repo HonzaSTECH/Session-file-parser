@@ -110,7 +110,7 @@ namespace Session_file_parser
     class ArrayVariable : Variable
     {
         private int length;
-        private readonly List<ArrayElement> value;
+        private List<ArrayElement> value = new List<ArrayElement>();
 
         public int Length
         {
@@ -283,6 +283,7 @@ namespace Session_file_parser
             if (type != 'a') { throw new InvalidDataException(); }
             i += 2; //Skipping the value delimiter
 
+            //Reading the length of the array
             string str = String.Empty;
             while (rawInput[i] != valueDelimiter)
             {
@@ -299,6 +300,7 @@ namespace Session_file_parser
             {
                 Variable inx = null;
                 Variable val = null;
+                str = String.Empty;
 
                 //Reading the index
                 char index_type = rawInput[i];
@@ -307,6 +309,8 @@ namespace Session_file_parser
                     str += rawInput[i];
                     i++;
                 }
+                str += rawInput[i];   //Adding the ending delimiter
+                i++;
                 switch (index_type)
                 {
                     case 'i':
@@ -317,6 +321,8 @@ namespace Session_file_parser
                         break;
                 }
 
+                str = String.Empty;
+
                 //Reading the value
                 char value_type = rawInput[i];
                 while (rawInput[i] != variableDelimiter)
@@ -324,6 +330,8 @@ namespace Session_file_parser
                     str += rawInput[i];
                     i++;
                 }
+                str += rawInput[i];   //Adding the ending delimiter
+                i++;
                 switch (value_type)
                 {
                     case 'i':
@@ -391,7 +399,7 @@ namespace Session_file_parser
             string outputPath = String.Empty;
             if (outputType == 'f')
             {
-                Console.WriteLine("Enter the path to the file (if it doesn't exist, it will be created, otherwise, it will be rewriteen).");
+                Console.WriteLine("Enter the path to the file (if it doesn't exist, it will be created, otherwise, it will be rewriten).");
                 outputPath = Console.ReadLine();
                 Console.WriteLine();
             }
@@ -441,6 +449,7 @@ namespace Session_file_parser
                         i++;
                     }
                     value_str += input[i];   //Adding the closing }
+                    i++;    //Skipping the closing }
                     var = ReadArrayVariable(value_str);
                 }
                 else    //Integer, double, boolean and string values are ending with ;
