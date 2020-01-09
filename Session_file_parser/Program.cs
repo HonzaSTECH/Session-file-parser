@@ -15,6 +15,7 @@ namespace Session_file_parser
         }
 
         public abstract void AddElement(ArrayElement arrayElement);
+        public abstract string GetValue();
     }
     class IntegerVariable : Variable
     {
@@ -36,6 +37,10 @@ namespace Session_file_parser
         {
             throw new NotImplementedException();
         }
+        public override string GetValue()
+        {
+            return this.value.ToString();
+        }
     }
     class DecimalVariable : Variable
     {
@@ -56,6 +61,10 @@ namespace Session_file_parser
         public override void AddElement(ArrayElement arrayElement)
         {
             throw new NotImplementedException();
+        }
+        public override string GetValue()
+        {
+            return this.value.ToString();
         }
     }
     class StringVariable : Variable
@@ -86,6 +95,10 @@ namespace Session_file_parser
         {
             throw new NotImplementedException();
         }
+        public override string GetValue()
+        {
+            return this.value.ToString();
+        }
     }
     class BooleanVariable : Variable
     {
@@ -105,6 +118,10 @@ namespace Session_file_parser
         public override void AddElement(ArrayElement arrayElement)
         {
             throw new NotImplementedException();
+        }
+        public override string GetValue()
+        {
+            return this.value.ToString();
         }
     }
     class ArrayVariable : Variable
@@ -132,6 +149,10 @@ namespace Session_file_parser
             if (type != 'a') { throw new InvalidDataException(); }
             this.Type = type;
             this.Length = length;
+        }
+        public override string GetValue()
+        {
+            return "Array[" + this.Length  + "]";
         }
     }
 
@@ -341,6 +362,7 @@ namespace Session_file_parser
                     //Console.WriteLine(str);
                     i++;    //Skipping the closing }
                     val = ReadArrayVariable(str);
+
                 }
                 else    //Integer, double, boolean and string values are ending with ;
                 {
@@ -351,7 +373,7 @@ namespace Session_file_parser
                     }
                     str += rawInput[i];   //Adding the ending delimiter
                     i++;
-                    switch (type)
+                    switch (value_type)
                     {
                         case 'i':
                             val = ReadIntegerVariable(str);
@@ -367,6 +389,7 @@ namespace Session_file_parser
                             break;
                     }
                 }
+                //Console.WriteLine("Index: {0} \t Value: {1}", inx.GetValue(), val.GetValue());
                 var.AddElement(new ArrayElement(inx, val));
             }
             return var;
