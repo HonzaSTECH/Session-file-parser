@@ -326,30 +326,46 @@ namespace Session_file_parser
 
                 //Reading the value
                 char value_type = rawInput[i];
-                while (rawInput[i] != variableDelimiter)
+                if (value_type == 'a')    //Array value is ending with }
                 {
-                    str += rawInput[i];
-                    i++;
+                    int arrayLevel = -1;
+                    while (arrayLevel > 0 || rawInput[i] != arrayEndSign)
+                    {
+                        //Console.WriteLine("arrayLevel: {0} \t input[i + 1]: {1} \t value_str: {2} \t i: {3}", arrayLevel, rawInput[i + 1], str, i);
+                        if (rawInput[i] == arrayStartSign) { arrayLevel++; }
+                        if (rawInput[i] == arrayEndSign) { arrayLevel--; }
+                        str += rawInput[i];
+                        i++;
+                    }
+                    str += rawInput[i];   //Adding the closing }
+                    //Console.WriteLine(str);
+                    i++;    //Skipping the closing }
+                    val = ReadArrayVariable(str);
                 }
-                str += rawInput[i];   //Adding the ending delimiter
-                i++;
-                switch (value_type)
+                else    //Integer, double, boolean and string values are ending with ;
                 {
-                    case 'i':
-                        val = ReadIntegerVariable(str);
-                        break;
-                    case 'd':
-                        val = ReadDecimalVariable(str);
-                        break;
-                    case 's':
-                        val = ReadStringVariable(str);
-                        break;
-                    case 'b':
-                        val = ReadBooleanVariable(str);
-                        break;
-                    case 'a':
-                        val = ReadArrayVariable(str);
-                        break;
+                    while (rawInput[i] != variableDelimiter)
+                    {
+                        str += rawInput[i];
+                        i++;
+                    }
+                    str += rawInput[i];   //Adding the ending delimiter
+                    i++;
+                    switch (type)
+                    {
+                        case 'i':
+                            val = ReadIntegerVariable(str);
+                            break;
+                        case 'd':
+                            val = ReadDecimalVariable(str);
+                            break;
+                        case 's':
+                            val = ReadStringVariable(str);
+                            break;
+                        case 'b':
+                            val = ReadBooleanVariable(str);
+                            break;
+                    }
                 }
                 var.AddElement(new ArrayElement(inx, val));
             }
@@ -434,6 +450,7 @@ namespace Session_file_parser
                 i++;    //Skipping the delimiter
                 Console.WriteLine("\tName: {0}", var_name);
 
+                //Reading the type
                 Variable var = null;
                 char type = input[i];
                 string value_str = type.ToString() + valueDelimiter.ToString();
@@ -444,12 +461,14 @@ namespace Session_file_parser
                     int arrayLevel = -1;
                     while (arrayLevel > 0 || input[i] != arrayEndSign)
                     {
+                        //Console.WriteLine("arrayLevel: {0} \t input[i + 1]: {1} \t value_str: {2} \t i: {3}", arrayLevel, input[i + 1], value_str, i);
                         if (input[i] == arrayStartSign) { arrayLevel++; }
                         if (input[i] == arrayEndSign) { arrayLevel--; }
                         value_str += input[i];
                         i++;
                     }
                     value_str += input[i];   //Adding the closing }
+                    //Console.WriteLine(value_str);
                     i++;    //Skipping the closing }
                     var = ReadArrayVariable(value_str);
                 }
