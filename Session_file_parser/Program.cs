@@ -127,10 +127,11 @@ namespace Session_file_parser
             this.value.Add(el);
         }
 
-        public ArrayVariable(char type)
+        public ArrayVariable(char type, int length)
         {
             if (type != 'a') { throw new InvalidDataException(); }
             this.Type = type;
+            this.Length = length;
         }
     }
 
@@ -294,7 +295,7 @@ namespace Session_file_parser
             str = String.Empty;
             i += 2;    //Skipping the delimiter and opening bracket
 
-            ArrayVariable var = new ArrayVariable(type);
+            ArrayVariable var = new ArrayVariable(type, arrLength);
 
             for (int j = 0; j < arrLength; j++)
             {
