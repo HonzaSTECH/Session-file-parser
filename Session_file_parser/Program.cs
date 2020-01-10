@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text;
 
 namespace Session_file_parser
 {
     abstract class Variable
     {
+        private int length = 0;
         private char type;
 
         public char Type
@@ -16,8 +18,9 @@ namespace Session_file_parser
 
         public abstract void AddElement(ArrayElement arrayElement);
         public abstract string GetValue();
+        public abstract int GetLength();
     }
-    class IntegerVariable : Variable
+    sealed class IntegerVariable : Variable
     {
         private int value;
 
@@ -41,17 +44,21 @@ namespace Session_file_parser
         {
             return this.value.ToString();
         }
+        public override int GetLength()
+        {
+            throw new NotImplementedException();
+        }
     }
-    class DecimalVariable : Variable
+    sealed class DecimalVariable : Variable
     {
-        private double value;
+        private decimal value;
 
-        public double Value
+        public decimal Value
         {
             get { return value; }
             set { this.value = value; }
         }
-        public DecimalVariable(char type, double value)
+        public DecimalVariable(char type, decimal value)
         {
             if (type != 'd') { throw new InvalidDataException(); }
             this.Type = type;
@@ -66,8 +73,12 @@ namespace Session_file_parser
         {
             return this.value.ToString();
         }
+        public override int GetLength()
+        {
+            throw new NotImplementedException();
+        }
     }
-    class StringVariable : Variable
+    sealed class StringVariable : Variable
     {
         private int length;
         private string value;
@@ -99,8 +110,12 @@ namespace Session_file_parser
         {
             return this.value.ToString();
         }
+        public override int GetLength()
+        {
+            return this.Length;
+        }
     }
-    class BooleanVariable : Variable
+    sealed class BooleanVariable : Variable
     {
         private bool value;
         public bool Value
@@ -123,8 +138,12 @@ namespace Session_file_parser
         {
             return this.value.ToString();
         }
+        public override int GetLength()
+        {
+            throw new NotImplementedException();
+        }
     }
-    class ArrayVariable : Variable
+    sealed class ArrayVariable : Variable
     {
         private int length;
         private List<ArrayElement> value = new List<ArrayElement>();
@@ -152,11 +171,15 @@ namespace Session_file_parser
         }
         public override string GetValue()
         {
-            return "Array[" + this.Length  + "]";
+            return "Array[" + this.Length + "]";
+        }
+        public override int GetLength()
+        {
+            return this.Length;
         }
     }
 
-    class ArrayElement
+    sealed class ArrayElement
     {
         private Variable index;
         private Variable value;
@@ -176,6 +199,28 @@ namespace Session_file_parser
         {
             this.index = index;
             this.value = value;
+        }
+    }
+
+    static class OutputManager
+    {
+        const int outputColumnWidth = 16;
+
+        public static string AdjustLength(string str)
+        {
+            //Adjusting the length string to make fit the column
+            if (str.Length > outputColumnWidth)
+            {
+                str = str.Substring(0, outputColumnWidth - 3) + "...";
+            }
+            else if (str.Length < outputColumnWidth)
+            {
+                while (str.Length < outputColumnWidth)
+                {
+                    str += ' ';
+                }
+            }
+            return str;
         }
     }
 
@@ -230,7 +275,7 @@ namespace Session_file_parser
                 value_str += rawInput[i];
                 i++;
             }
-            double value = double.Parse(value_str, System.Globalization.CultureInfo.InvariantCulture);
+            decimal value = decimal.Parse(value_str, System.Globalization.CultureInfo.InvariantCulture);
             return new DecimalVariable(type, value);
         }
 
@@ -455,7 +500,6 @@ namespace Session_file_parser
             int i = 0;
             int varCount = 0;
             int inputLength = input.Length;
-            string result = String.Empty;
             Dictionary<string, Variable> vars = new Dictionary<string, Variable>();
 
             while (i < inputLength)
@@ -522,7 +566,65 @@ namespace Session_file_parser
                 }
                 vars.Add(var_name, var);  //Addition of the formated variable to the dictionary
             }
-            
+
+            //Constructing output
+            string result = String.Empty;
+            StringBuilder resultBuilder = new StringBuilder();
+
+            //The first two lines (always same)
+            resultBuilder.Append("|Name            |Type            |Value           |¶");
+            resultBuilder.Append("|----------------|----------------|----------------|¶");
+            foreach (KeyValuePair<string, Variable> currentVar in vars)
+            {
+                string varName = currentVar.Key;
+                Variable var = currentVar.Value;
+
+                varName = OutputManager.AdjustLength(varName);
+                resultBuilder.Append("|" + varName + "|");
+
+                char varType = var.Type;
+                string varTypeStr = String.Empty;
+                switch (varType)
+                {
+                    case 'i':
+                        varTypeStr = "INT";
+                        break;
+                    case 'd':
+                        varTypeStr = "DOUBLE";
+                        break;
+                    case 's':
+                        varTypeStr = "STRING";
+                        varTypeStr += "(" + var.GetLength().ToString() + ")";
+                        break;
+                    case 'b':
+                        varTypeStr = "BOOL";
+                        break;
+                    case 'a':
+                        varTypeStr = "ARRAY";
+                        varTypeStr += "(" + var.GetLength().ToString() + ")";
+                        break;
+                }
+                varTypeStr = OutputManager.AdjustLength(varTypeStr);
+                resultBuilder.Append(varTypeStr + "|");
+
+                string varValueStr = String.Empty;
+                switch (varType)
+                {
+                    case 'i':
+                    case 'd':
+                    case 's':
+                    case 'b':
+                        varValueStr = var.GetValue().ToString();
+                        break;
+                    case 'a':
+                        //TODO
+                        break;
+                }
+                varValueStr = OutputManager.AdjustLength(varValueStr);
+                resultBuilder.Append(varValueStr + "|¶");
+            }
+            result = resultBuilder.ToString();
+
             Console.WriteLine("Done!");
 
             if (outputType == 't')
