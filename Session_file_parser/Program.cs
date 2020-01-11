@@ -259,20 +259,20 @@ namespace Session_file_parser
                     case 's':
                     case 'b':
                         str = AdjustLength(el.Value.GetValue().ToString());
+                        output.Append(str + "|\n");
                         break;
                     //Array - increase indentation and start sub-table
                     case 'a':
                         str = "Index           |Type            |Value           ";
-                        output.Append(str + "|¶");
-                        str = GetIndentation(arrayLevel + 1) + "----------------|--------?-------|----------------";
-                        output.Append(str + "|¶");
+                        output.Append(str + "|\n");
+                        str = GetIndentation(arrayLevel + 1) + "----------------|----------------|----------------";
+                        output.Append(str + "|\n");
+                        str = String.Empty;
                         OutputArray(arrayLevel + 1, el.Value.GetArrayValues(), output);
                         break;
                 }
-                output.Append(str + "|¶");
             }
-            output.Append(GetIndentation(arrayLevel) + "___________________________________________________¶");
-            //output.Append("¶");
+            output.Append(GetIndentation(arrayLevel) + "________________|________________|________________|\n");
         }
 
         public static string GetIndentation(int indent)
@@ -465,7 +465,6 @@ namespace Session_file_parser
                     int arrayLevel = -1;
                     while (arrayLevel > 0 || rawInput[i] != arrayEndSign)
                     {
-                        //Console.WriteLine("arrayLevel: {0} \t input[i + 1]: {1} \t value_str: {2} \t i: {3}", arrayLevel, rawInput[i + 1], str, i);
                         if (rawInput[i] == arrayStartSign) { arrayLevel++; }
                         if (rawInput[i] == arrayEndSign) { arrayLevel--; }
                         str += rawInput[i];
@@ -596,14 +595,12 @@ namespace Session_file_parser
                     int arrayLevel = -1;
                     while (arrayLevel > 0 || input[i] != arrayEndSign)
                     {
-                        //Console.WriteLine("arrayLevel: {0} \t input[i + 1]: {1} \t value_str: {2} \t i: {3}", arrayLevel, input[i + 1], value_str, i);
                         if (input[i] == arrayStartSign) { arrayLevel++; }
                         if (input[i] == arrayEndSign) { arrayLevel--; }
                         value_str += input[i];
                         i++;
                     }
                     value_str += input[i];   //Adding the closing }
-                    //Console.WriteLine(value_str);
                     i++;    //Skipping the closing }
                     var = ReadArrayVariable(value_str);
                 }
@@ -640,8 +637,8 @@ namespace Session_file_parser
             StringBuilder resultBuilder = new StringBuilder();
 
             //The first two lines (always same)
-            resultBuilder.Append("|Name            |Type            |Value           |¶");
-            resultBuilder.Append("|----------------|----------------|----------------|¶");
+            resultBuilder.Append("|Name            |Type            |Value           |\n");
+            resultBuilder.Append("|----------------|----------------|----------------|\n");
             foreach (KeyValuePair<string, Variable> currentVar in vars)
             {
                 //Reading the name of the variable (key) and its object (value)
@@ -689,14 +686,14 @@ namespace Session_file_parser
                     case 'b':
                         varValueStr = var.GetValue().ToString();
                         varValueStr = OutputManager.AdjustLength(varValueStr);
-                        resultBuilder.Append(varValueStr + "|¶");
+                        resultBuilder.Append(varValueStr + "|\n");
                         break;
                     //Array - increase indentation and start sub-table
                     case 'a':
                         varValueStr = "Index           |Type            |Value           ";
-                        resultBuilder.Append(varValueStr + "|¶");
+                        resultBuilder.Append(varValueStr + "|\n");
                         varValueStr = OutputManager.GetIndentation(1) + "----------------|----------------|----------------";
-                        resultBuilder.Append(varValueStr + "|¶");
+                        resultBuilder.Append(varValueStr + "|\n");
                         OutputManager.OutputArray(1, var.GetArrayValues(), resultBuilder);
                         break;
                 }
@@ -707,28 +704,18 @@ namespace Session_file_parser
 
             if (outputType == 't')
             {
-                string[] resultLines = result.Split('¶');
-                foreach (string line in resultLines)
-                {
-                    Console.WriteLine(line);
-                }
-                Console.WriteLine("Press any key to exit.");
-                Console.ReadKey(true);
+                Console.WriteLine(result);
             }
             else
             {
-                using (StreamWriter writer = new StreamWriter(File.Create(outputPath)))
+                using (StreamWriter Writer = new StreamWriter(File.Create(outputPath)))
                 {
-                    string[] resultLines = result.Split('¶');
-                    foreach (string line in resultLines)
-                    {
-                        writer.WriteLine(line);
-                    }
-                    Console.WriteLine("Parsed text was saved into {0}.",outputPath);
-                    Console.WriteLine("Press any key to exit.");
-                    Console.ReadKey(true);
+                    Writer.WriteLine(result);
+                    Console.WriteLine("Parsed text was saved into {0}.", outputPath);
                 }
             }
+            Console.WriteLine("Press any key to exit.");
+            Console.ReadKey(true);
         }
     }
 }
