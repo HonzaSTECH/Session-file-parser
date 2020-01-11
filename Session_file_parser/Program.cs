@@ -5,15 +5,15 @@ using System.Text;
 
 namespace Session_file_parser
 {
-    abstract class Variable
+    internal abstract class Variable
     {
-        private int length = 0;
+        private readonly int length = 0;
         private char type;
 
         public char Type
         {
-            get { return type; }
-            set { type = value; }
+            get => type;
+            set => type = value;
         }
 
         public abstract string GetValue();
@@ -31,155 +31,160 @@ namespace Session_file_parser
             throw new NotImplementedException();
         }
     }
-    sealed class IntegerVariable : Variable
+
+    internal sealed class IntegerVariable : Variable
     {
         private int value;
 
         public int Value
         {
-            get { return value; }
-            set { this.value = value; }
+            get => value;
+            set => this.value = value;
         }
         public IntegerVariable(char type, int value)
         {
             if (type != 'i') { throw new InvalidDataException(); }
-            this.Type = type;
-            this.Value = value;
+            Type = type;
+            Value = value;
         }
 
         public override string GetValue()
         {
-            return this.value.ToString();
+            return value.ToString();
         }
     }
-    sealed class DecimalVariable : Variable
+
+    internal sealed class DecimalVariable : Variable
     {
         private decimal value;
 
         public decimal Value
         {
-            get { return value; }
-            set { this.value = value; }
+            get => value;
+            set => this.value = value;
         }
         public DecimalVariable(char type, decimal value)
         {
             if (type != 'd') { throw new InvalidDataException(); }
-            this.Type = type;
-            this.Value = value;
+            Type = type;
+            Value = value;
         }
 
         public override string GetValue()
         {
-            return this.value.ToString();
+            return value.ToString();
         }
     }
-    sealed class StringVariable : Variable
+
+    internal sealed class StringVariable : Variable
     {
         private int length;
         private string value;
 
         public int Length
         {
-            get { return length; }
-            set { length = value; }
+            get => length;
+            set => length = value;
         }
         public string Value
         {
-            get { return value; }
-            set { this.value = value; }
+            get => value;
+            set => this.value = value;
         }
         public StringVariable(char type, int length, string value)
         {
             if (type != 's') { throw new InvalidDataException(); }
             if (length != value.Length) { throw new InvalidDataException(); }
-            this.Type = type;
-            this.Length = length;
-            this.Value = value;
+            Type = type;
+            Length = length;
+            Value = value;
         }
 
         public override string GetValue()
         {
-            return this.value.ToString();
+            return value.ToString();
         }
         public override int GetLength()
         {
-            return this.Length;
+            return Length;
         }
     }
-    sealed class BooleanVariable : Variable
+
+    internal sealed class BooleanVariable : Variable
     {
         private bool value;
         public bool Value
         {
-            get { return value; }
-            set { this.value = value; }
+            get => value;
+            set => this.value = value;
         }
         public BooleanVariable(char type, bool value)
         {
             if (type != 'b') { throw new InvalidDataException(); }
-            this.Type = type;
-            this.Value = value;
+            Type = type;
+            Value = value;
         }
 
         public override string GetValue()
         {
-            return this.value.ToString();
+            return value.ToString();
         }
     }
-    sealed class ArrayVariable : Variable
+
+    internal sealed class ArrayVariable : Variable
     {
         private int length;
-        private List<ArrayElement> value = new List<ArrayElement>();
+        private readonly List<ArrayElement> value = new List<ArrayElement>();
 
         public int Length
         {
-            get { return length; }
-            set { length = value; }
+            get => length;
+            set => length = value;
         }
         public List<ArrayElement> Value
         {
-            get { return this.value; }
-            set { throw new InvalidOperationException(); }
+            get => value;
+            set => throw new InvalidOperationException();
         }
         public ArrayVariable(char type, int length)
         {
             if (type != 'a') { throw new InvalidDataException(); }
-            this.Type = type;
-            this.Length = length;
+            Type = type;
+            Length = length;
         }
 
         public override void AddElement(ArrayElement el)
         {
-            this.value.Add(el);
+            value.Add(el);
         }
         public override string GetValue()
         {
-            return "Array[" + this.Length + "]";
+            return "Array[" + Length + "]";
         }
         public override int GetLength()
         {
-            return this.Length;
+            return Length;
         }
         public override IEnumerable<ArrayElement> GetArrayValues()
         {
-            return this.Value;
+            return Value;
         }
     }
 
-    sealed class ArrayElement
+    internal sealed class ArrayElement
     {
         private Variable index;
         private Variable value;
 
         public Variable Index
         {
-            get { return this.index; }
-            set { this.index = value; }
+            get => index;
+            set => index = value;
         }
         public Variable Value
         {
-            get { return this.value; }
-            set { this.value = value; }
+            get => value;
+            set => this.value = value;
         }
 
         public ArrayElement(Variable index, Variable value)
@@ -189,9 +194,9 @@ namespace Session_file_parser
         }
     }
 
-    static class OutputManager
+    internal static class OutputManager
     {
-        const int outputColumnWidth = 16;
+        private const int outputColumnWidth = 16;
 
         public static string AdjustLength(string str)
         {
@@ -218,7 +223,7 @@ namespace Session_file_parser
              */
             foreach (ArrayElement el in arrayElements)
             {
-                string str = String.Empty;
+                string str = string.Empty;
 
                 //Reading the index
                 str = AdjustLength(el.Index.GetValue());
@@ -267,7 +272,7 @@ namespace Session_file_parser
                         output.Append(str + "|\n");
                         str = GetIndentation(arrayLevel + 1) + "----------------|----------------|----------------";
                         output.Append(str + "|\n");
-                        str = String.Empty;
+                        str = string.Empty;
                         OutputArray(arrayLevel + 1, el.Value.GetArrayValues(), output);
                         break;
                 }
@@ -278,7 +283,7 @@ namespace Session_file_parser
         public static string GetIndentation(int indent)
         {
             indent *= 2;    //One level of indentation is two columns
-            string ind = String.Empty;
+            string ind = string.Empty;
             ind += "|";
             for (int i = 0; i < indent; i++)
             {
@@ -292,16 +297,16 @@ namespace Session_file_parser
         }
     }
 
-    class Program
+    internal class Program
     {
-        const char nameDelimiter = '|';
-        const char valueDelimiter = ':';
-        const char variableDelimiter = ';';
-        const char stringSigns = '"';
-        const char arrayStartSign = '{';
-        const char arrayEndSign = '}';
+        private const char nameDelimiter = '|';
+        private const char valueDelimiter = ':';
+        private const char variableDelimiter = ';';
+        private const char stringSigns = '"';
+        private const char arrayStartSign = '{';
+        private const char arrayEndSign = '}';
 
-        static IntegerVariable ReadIntegerVariable(string rawInput)
+        private static IntegerVariable ReadIntegerVariable(string rawInput)
         {
             /**
              * Method to return an object of type IntegerVariable with data from input string
@@ -314,7 +319,7 @@ namespace Session_file_parser
             if (type != 'i') { throw new InvalidDataException(); }
             i += 2; //Skipping the value delimiter
 
-            string value_str = String.Empty;
+            string value_str = string.Empty;
             while (rawInput[i] != variableDelimiter)
             {
                 value_str += rawInput[i];
@@ -324,7 +329,7 @@ namespace Session_file_parser
             return new IntegerVariable(type, value);
         }
 
-        static DecimalVariable ReadDecimalVariable(string rawInput)
+        private static DecimalVariable ReadDecimalVariable(string rawInput)
         {
             /**
              * Method to return an object of type DecimalVariable with data from input string
@@ -337,7 +342,7 @@ namespace Session_file_parser
             if (type != 'd') { throw new InvalidDataException(); }
             i += 2; //Skipping the value delimiter
 
-            string value_str = String.Empty;
+            string value_str = string.Empty;
             while (rawInput[i] != variableDelimiter)
             {
                 value_str += rawInput[i];
@@ -347,7 +352,7 @@ namespace Session_file_parser
             return new DecimalVariable(type, value);
         }
 
-        static StringVariable ReadStringVariable(string rawInput)
+        private static StringVariable ReadStringVariable(string rawInput)
         {
             /**
              * Method to return an object of type StringVariable with data from input string
@@ -362,7 +367,7 @@ namespace Session_file_parser
             i += 2; //Skipping the value delimiter
 
             //Reading the length (A)
-            string str = String.Empty;
+            string str = string.Empty;
             while (rawInput[i] != valueDelimiter)
             {
                 str += rawInput[i];
@@ -372,7 +377,7 @@ namespace Session_file_parser
             i += 2; //Skipping the value delimiter and the opening "
 
             //Reading the content (X)
-            str = String.Empty;
+            str = string.Empty;
             while (rawInput[i] != variableDelimiter)
             {
                 str += rawInput[i];
@@ -381,7 +386,8 @@ namespace Session_file_parser
             str = str.Remove(str.Length - 1);   //Removing the closing "
             return new StringVariable(type, length, str);
         }
-        static BooleanVariable ReadBooleanVariable(string rawInput)
+
+        private static BooleanVariable ReadBooleanVariable(string rawInput)
         {
             /**
              * Method to return an object of type BooleanVariable with data from input string
@@ -398,7 +404,7 @@ namespace Session_file_parser
             return new BooleanVariable(type, val);
         }
 
-        static ArrayVariable ReadArrayVariable(string rawInput)
+        private static ArrayVariable ReadArrayVariable(string rawInput)
         {
             /**
              * Method to return an object of type ArrayVariable with data from input string
@@ -419,14 +425,14 @@ namespace Session_file_parser
             i += 2; //Skipping the value delimiter
 
             //Reading the length of the array
-            string str = String.Empty;
+            string str = string.Empty;
             while (rawInput[i] != valueDelimiter)
             {
                 str += rawInput[i];
                 i++;
             }
             int arrLength = Convert.ToInt32(str);
-            str = String.Empty;
+            str = string.Empty;
             i += 2;    //Skipping the delimiter and opening bracket
 
             ArrayVariable var = new ArrayVariable(type, arrLength);
@@ -435,7 +441,7 @@ namespace Session_file_parser
             {
                 Variable inx = null;
                 Variable val = null;
-                str = String.Empty;
+                str = string.Empty;
 
                 //Reading the index
                 char index_type = rawInput[i];
@@ -456,7 +462,7 @@ namespace Session_file_parser
                         break;
                 }
 
-                str = String.Empty;
+                str = string.Empty;
 
                 //Reading the value
                 char value_type = rawInput[i];
@@ -507,7 +513,7 @@ namespace Session_file_parser
             return var;
         }
 
-        static void Main(string[] args)
+        private static void Main(string[] args)
         {
             Console.WriteLine("Do you want to provide input as a file or as a text? (F/T)");
             char inputType = ' ';
@@ -518,14 +524,14 @@ namespace Session_file_parser
                 Console.WriteLine();
             }
 
-            string inputPath = String.Empty;
-            string input = String.Empty;
+            string inputPath = string.Empty;
+            string input = string.Empty;
             if (inputType == 'f')
             {
                 Console.WriteLine("Enter the path to the session file.");
                 while (!File.Exists(inputPath))
                 {
-                    if (inputPath != String.Empty)
+                    if (inputPath != string.Empty)
                     {
                         Console.WriteLine("File not found.");
                     }
@@ -548,7 +554,7 @@ namespace Session_file_parser
                 Console.WriteLine();
             }
 
-            string outputPath = String.Empty;
+            string outputPath = string.Empty;
             if (outputType == 'f')
             {
                 Console.WriteLine("Enter the path to the file (if it doesn't exist, it will be created, otherwise, it will be rewriten).");
@@ -575,7 +581,7 @@ namespace Session_file_parser
                 Console.WriteLine("Reading variable #{0}", varCount);
 
                 //Getting the name of the variable
-                string var_name = String.Empty;
+                string var_name = string.Empty;
                 while (input[i] != nameDelimiter)
                 {
                     var_name += input[i];
@@ -633,7 +639,7 @@ namespace Session_file_parser
             }
 
             //Constructing output
-            string result = String.Empty;
+            string result = string.Empty;
             StringBuilder resultBuilder = new StringBuilder();
 
             //The first two lines (always same)
@@ -651,7 +657,7 @@ namespace Session_file_parser
 
                 //Outputting the type
                 char varType = var.Type;
-                string varTypeStr = String.Empty;
+                string varTypeStr = string.Empty;
                 switch (varType)
                 {
                     case 'i':
@@ -676,7 +682,7 @@ namespace Session_file_parser
                 resultBuilder.Append(varTypeStr + "|");
 
                 //Outputting the value
-                string varValueStr = String.Empty;
+                string varValueStr = string.Empty;
                 switch (varType)
                 {
                     //Int, decimal, string and boolean - just writing the raw value
