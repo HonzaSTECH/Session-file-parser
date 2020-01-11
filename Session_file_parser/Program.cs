@@ -7,7 +7,6 @@ namespace Session_file_parser
 {
     internal abstract class Variable
     {
-        private readonly int length = 0;
         private char type;
 
         public char Type
@@ -223,7 +222,7 @@ namespace Session_file_parser
              */
             foreach (ArrayElement el in arrayElements)
             {
-                string str = string.Empty;
+                string str;
 
                 //Reading the index
                 str = AdjustLength(el.Index.GetValue());
@@ -272,7 +271,6 @@ namespace Session_file_parser
                         output.Append(str + "|\n");
                         str = GetIndentation(arrayLevel + 1) + "----------------|----------------|----------------";
                         output.Append(str + "|\n");
-                        str = string.Empty;
                         OutputArray(arrayLevel + 1, el.Value.GetArrayValues(), output);
                         break;
                 }
@@ -302,7 +300,6 @@ namespace Session_file_parser
         private const char nameDelimiter = '|';
         private const char valueDelimiter = ':';
         private const char variableDelimiter = ';';
-        private const char stringSigns = '"';
         private const char arrayStartSign = '{';
         private const char arrayEndSign = '}';
 
@@ -432,7 +429,6 @@ namespace Session_file_parser
                 i++;
             }
             int arrLength = Convert.ToInt32(str);
-            str = string.Empty;
             i += 2;    //Skipping the delimiter and opening bracket
 
             ArrayVariable var = new ArrayVariable(type, arrLength);
@@ -513,7 +509,7 @@ namespace Session_file_parser
             return var;
         }
 
-        private static void Main(string[] args)
+        private static void Main()
         {
             Console.WriteLine("Do you want to provide input as a file or as a text? (F/T)");
             char inputType = ' ';
@@ -639,7 +635,6 @@ namespace Session_file_parser
             }
 
             //Constructing output
-            string result = string.Empty;
             StringBuilder resultBuilder = new StringBuilder();
 
             //The first two lines (always same)
@@ -682,7 +677,7 @@ namespace Session_file_parser
                 resultBuilder.Append(varTypeStr + "|");
 
                 //Outputting the value
-                string varValueStr = string.Empty;
+                string varValueStr;
                 switch (varType)
                 {
                     //Int, decimal, string and boolean - just writing the raw value
@@ -704,7 +699,7 @@ namespace Session_file_parser
                         break;
                 }
             }
-            result = resultBuilder.ToString();
+            string result = resultBuilder.ToString();
 
             Console.WriteLine("Done!");
 
