@@ -16,9 +16,20 @@ namespace Session_file_parser
             set { type = value; }
         }
 
-        public abstract void AddElement(ArrayElement arrayElement);
         public abstract string GetValue();
-        public abstract int GetLength();
+
+        public virtual int GetLength()
+        {
+            throw new NotImplementedException();
+        }
+        public virtual void AddElement(ArrayElement arrayElement)
+        {
+            throw new NotImplementedException();
+        }
+        public virtual IEnumerable<ArrayElement> GetArrayValues()
+        {
+            throw new NotImplementedException();
+        }
     }
     sealed class IntegerVariable : Variable
     {
@@ -36,17 +47,9 @@ namespace Session_file_parser
             this.Value = value;
         }
 
-        public override void AddElement(ArrayElement arrayElement)
-        {
-            throw new NotImplementedException();
-        }
         public override string GetValue()
         {
             return this.value.ToString();
-        }
-        public override int GetLength()
-        {
-            throw new NotImplementedException();
         }
     }
     sealed class DecimalVariable : Variable
@@ -65,17 +68,9 @@ namespace Session_file_parser
             this.Value = value;
         }
 
-        public override void AddElement(ArrayElement arrayElement)
-        {
-            throw new NotImplementedException();
-        }
         public override string GetValue()
         {
             return this.value.ToString();
-        }
-        public override int GetLength()
-        {
-            throw new NotImplementedException();
         }
     }
     sealed class StringVariable : Variable
@@ -102,10 +97,6 @@ namespace Session_file_parser
             this.Value = value;
         }
 
-        public override void AddElement(ArrayElement arrayElement)
-        {
-            throw new NotImplementedException();
-        }
         public override string GetValue()
         {
             return this.value.ToString();
@@ -130,17 +121,9 @@ namespace Session_file_parser
             this.Value = value;
         }
 
-        public override void AddElement(ArrayElement arrayElement)
-        {
-            throw new NotImplementedException();
-        }
         public override string GetValue()
         {
             return this.value.ToString();
-        }
-        public override int GetLength()
-        {
-            throw new NotImplementedException();
         }
     }
     sealed class ArrayVariable : Variable
@@ -158,16 +141,16 @@ namespace Session_file_parser
             get { return this.value; }
             set { throw new InvalidOperationException(); }
         }
-        public override void AddElement(ArrayElement el)
-        {
-            this.value.Add(el);
-        }
-
         public ArrayVariable(char type, int length)
         {
             if (type != 'a') { throw new InvalidDataException(); }
             this.Type = type;
             this.Length = length;
+        }
+
+        public override void AddElement(ArrayElement el)
+        {
+            this.value.Add(el);
         }
         public override string GetValue()
         {
@@ -176,6 +159,10 @@ namespace Session_file_parser
         public override int GetLength()
         {
             return this.Length;
+        }
+        public override IEnumerable<ArrayElement> GetArrayValues()
+        {
+            return this.Value;
         }
     }
 
@@ -221,6 +208,87 @@ namespace Session_file_parser
                 }
             }
             return str;
+        }
+
+        public static void OutputArray(int arrayLevel, IEnumerable<ArrayElement> arrayElements, StringBuilder output)
+        {
+            /**
+             * arrayLevel represents the layer of array and is used for proper indenting of the text
+             * 1 stands for the first dimension of array (intending two columns - name and type).
+             */
+            foreach (ArrayElement el in arrayElements)
+            {
+                string str = String.Empty;
+
+                //Reading the index
+                str = AdjustLength(el.Index.GetValue());
+                str = GetIndentation(arrayLevel) + str;
+                output.Append(str + "|");
+
+                //Reading the type of value
+                char elValType = el.Value.Type;
+                switch (elValType)
+                {
+                    case 'i':
+                        str = "INT";
+                        break;
+                    case 'd':
+                        str = "DOUBLE";
+                        break;
+                    case 's':
+                        str = "STRING";
+                        str += "(" + el.Value.GetLength().ToString() + ")";
+                        break;
+                    case 'b':
+                        str = "BOOL";
+                        break;
+                    case 'a':
+                        str = "ARRAY";
+                        str += "(" + el.Value.GetLength().ToString() + ")";
+                        break;
+                }
+                str = AdjustLength(str);
+                output.Append(str + "|");
+
+                //Reading the value itself
+                switch (elValType)
+                {
+                    //Int, decimal, string and boolean - just writing the raw value
+                    case 'i':
+                    case 'd':
+                    case 's':
+                    case 'b':
+                        str = AdjustLength(el.Value.GetValue().ToString());
+                        break;
+                    //Array - increase indentation and start sub-table
+                    case 'a':
+                        str = "Index           |Type            |Value           ";
+                        output.Append(str + "|¶");
+                        str = GetIndentation(arrayLevel + 1) + "----------------|--------?-------|----------------";
+                        output.Append(str + "|¶");
+                        OutputArray(arrayLevel + 1, el.Value.GetArrayValues(), output);
+                        break;
+                }
+                output.Append(str + "|¶");
+            }
+            output.Append(GetIndentation(arrayLevel) + "___________________________________________________¶");
+            //output.Append("¶");
+        }
+
+        public static string GetIndentation(int indent)
+        {
+            indent *= 2;    //One level of indentation is two columns
+            string ind = String.Empty;
+            ind += "|";
+            for (int i = 0; i < indent; i++)
+            {
+                for (int j = 0; j < outputColumnWidth; j++)
+                {
+                    ind += " ";
+                }
+                ind += "|";
+            }
+            return ind;
         }
     }
 
@@ -576,12 +644,15 @@ namespace Session_file_parser
             resultBuilder.Append("|----------------|----------------|----------------|¶");
             foreach (KeyValuePair<string, Variable> currentVar in vars)
             {
+                //Reading the name of the variable (key) and its object (value)
                 string varName = currentVar.Key;
                 Variable var = currentVar.Value;
 
+                //Outputting the name
                 varName = OutputManager.AdjustLength(varName);
                 resultBuilder.Append("|" + varName + "|");
 
+                //Outputting the type
                 char varType = var.Type;
                 string varTypeStr = String.Empty;
                 switch (varType)
@@ -607,21 +678,28 @@ namespace Session_file_parser
                 varTypeStr = OutputManager.AdjustLength(varTypeStr);
                 resultBuilder.Append(varTypeStr + "|");
 
+                //Outputting the value
                 string varValueStr = String.Empty;
                 switch (varType)
                 {
+                    //Int, decimal, string and boolean - just writing the raw value
                     case 'i':
                     case 'd':
                     case 's':
                     case 'b':
                         varValueStr = var.GetValue().ToString();
+                        varValueStr = OutputManager.AdjustLength(varValueStr);
+                        resultBuilder.Append(varValueStr + "|¶");
                         break;
+                    //Array - increase indentation and start sub-table
                     case 'a':
-                        //TODO
+                        varValueStr = "Index           |Type            |Value           ";
+                        resultBuilder.Append(varValueStr + "|¶");
+                        varValueStr = OutputManager.GetIndentation(1) + "----------------|----------------|----------------";
+                        resultBuilder.Append(varValueStr + "|¶");
+                        OutputManager.OutputArray(1, var.GetArrayValues(), resultBuilder);
                         break;
                 }
-                varValueStr = OutputManager.AdjustLength(varValueStr);
-                resultBuilder.Append(varValueStr + "|¶");
             }
             result = resultBuilder.ToString();
 
